@@ -35,8 +35,9 @@
             android:paddingBottom="8dp"
             android:scrollbars="vertical"
             android:text=""
-            app:layout_constraintTop_toBottomOf="@id/feedImageView"
-            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/feedImageView"
+            app:layout_constraintBottom_toBottomOf="@id/feedImageView"
+            app:layout_constraintStart_toEndOf="@id/feedImageView"
             app:layout_constraintEnd_toEndOf="parent"/>
 
         <TextView
