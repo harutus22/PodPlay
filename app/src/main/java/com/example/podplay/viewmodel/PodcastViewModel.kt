@@ -39,7 +39,7 @@ class PodcastViewModel(app: Application): AndroidViewModel(app) {
     }
 
     private fun podcastToPodcastView(podcast: Podcast): PodcastViewData{
-        return PodcastViewData(false, podcast.feedTitle,
+        return PodcastViewData(podcast.id != null, podcast.feedTitle,
             podcast.feedUrl, podcast.feedDesc, podcast.imageUrl, episodeToEpisodesView(podcast.episodes))
     }
 
@@ -61,7 +61,8 @@ class PodcastViewModel(app: Application): AndroidViewModel(app) {
 
     fun saveActivePodcast(){
         val repo = podcastRepo ?: return
-        activePodcast?.let { repo.save(it) }
+        activePodcast?.let {
+            repo.save(it) }
     }
 
     private fun podcastToSummaryView(podcast: Podcast): SearchViewModel.PodcastSummaryViewData{
@@ -71,6 +72,26 @@ class PodcastViewModel(app: Application): AndroidViewModel(app) {
             podcast.imageUrl,
             podcast.feedUrl
         )
+    }
+
+    fun setActivePodcast(feedUrl: String, callback: (SearchViewModel.PodcastSummaryViewData?) -> Unit){
+        val repo = podcastRepo ?: return
+        repo.getPodcast(feedUrl){ podcast ->
+            if (podcast == null){
+                callback(null)
+            } else {
+                activePodcastViewData = podcastToPodcastView(podcast)
+                activePodcast = podcast
+                callback(podcastToSummaryView(podcast))
+            }
+        }
+    }
+
+    fun deleteActivePodcast(){
+        val repo = podcastRepo ?: return
+        activePodcast?.let {
+            repo.delete(it)
+        }
     }
 
     fun getPodcasts(): LiveData<List<SearchViewModel.PodcastSummaryViewData>>?{

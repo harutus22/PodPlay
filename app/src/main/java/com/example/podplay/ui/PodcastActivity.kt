@@ -21,15 +21,22 @@ import com.example.podplay.adapter.PodcastListAdapter
 import com.example.podplay.db.PodPlayDatabase
 import com.example.podplay.repository.ItunesRepo
 import com.example.podplay.repository.PodcastRepo
+import com.example.podplay.service.EpisodeUpdateService
 import com.example.podplay.service.FeedService
 import com.example.podplay.service.ItunesService
 import com.example.podplay.viewmodel.PodcastViewModel
 import com.example.podplay.viewmodel.SearchViewModel
+import com.firebase.jobdispatcher.*
 import kotlinx.android.synthetic.main.activity_podcast.*
 
 class PodcastActivity : AppCompatActivity(), PodcastListAdapter.PodcastListAdapterListener, PodcastDetailsFragment.OnPodcastDetailsListener {
     override fun onSubscribe() {
         podcastViewModel.saveActivePodcast()
+        supportFragmentManager.popBackStack()
+    }
+
+    override fun unSubscribe() {
+        podcastViewModel.deleteActivePodcast()
         supportFragmentManager.popBackStack()
     }
 
@@ -41,6 +48,7 @@ class PodcastActivity : AppCompatActivity(), PodcastListAdapter.PodcastListAdapt
     companion object{
         val TAG = javaClass.simpleName
         private val TAG_DETAILS_FRAGMENT = "DetailsFragment"
+        private val TAG_EPISODE_UPDATE_JOB = "com.example.podplay.episodes"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +60,7 @@ class PodcastActivity : AppCompatActivity(), PodcastListAdapter.PodcastListAdapt
         setupPodcastListView()
         handleIntent(intent)
         addBackStackListener()
+        scheduleJobs()
         }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -59,6 +68,17 @@ class PodcastActivity : AppCompatActivity(), PodcastListAdapter.PodcastListAdapt
         inflater.inflate(R.menu.menu_search, menu)
 
         searchMenuItem = menu!!.findItem(R.id.search_item)
+        searchMenuItem.setOnActionExpandListener(object : MenuItem.OnActionExpandListener{
+            override fun onMenuItemActionExpand(item: MenuItem?): Boolean {
+                return true
+            }
+
+            override fun onMenuItemActionCollapse(item: MenuItem?): Boolean {
+                showSubscribedPodcasts()
+                return true
+            }
+
+        })
         val searchView = searchMenuItem.actionView as SearchView
         val searchManager = getSystemService(Context.SEARCH_SERVICE) as SearchManager
         searchView.setSearchableInfo(searchManager.getSearchableInfo(componentName))
@@ -117,6 +137,14 @@ class PodcastActivity : AppCompatActivity(), PodcastListAdapter.PodcastListAdapt
         if(Intent.ACTION_SEARCH == intent.action){
             val query = intent.getStringExtra(SearchManager.QUERY)
             performSearch(query)
+        }
+        val podcastFeedUrl = intent.getStringExtra(EpisodeUpdateService.EXTRA_FEED_URL)
+        if (podcastFeedUrl != null){
+            podcastViewModel.setActivePodcast(podcastFeedUrl){
+                it?.let {
+                        podcastSummaryViewData -> onShowDetails(podcastSummaryViewData)
+                }
+            }
         }
     }
 
@@ -184,6 +212,20 @@ class PodcastActivity : AppCompatActivity(), PodcastListAdapter.PodcastListAdapt
             toolbar.title = getString(R.string.subscribed_podcasts)
             podcastListAdapter.setSearchData(podcast)
         }
+    }
+
+    private fun scheduleJobs(){
+        val dispatcher = FirebaseJobDispatcher(GooglePlayDriver(this))
+        val oneHourInSeconds = 60*60
+        val tenMinutesInSeconds = 60*10
+        val episodeUpdateJob = dispatcher.newJobBuilder()
+            .setService(EpisodeUpdateService::class.java)
+            .setTag(TAG_EPISODE_UPDATE_JOB)
+            .setRecurring(true) //true causes job to repeat
+            .setTrigger(Trigger.executionWindow(oneHourInSeconds, (oneHourInSeconds +tenMinutesInSeconds))) // sets bounds for scheduler to repeat the job
+            .setLifetime(Lifetime.FOREVER) // tells the job t work even if it had been rebooted, can be change by replacing Lifetime.UNTIL_NEXT_BOOT
+            .setConstraints(Constraint.ON_UNMETERED_NETWORK, Constraint.DEVICE_CHARGING).build()
+        dispatcher.mustSchedule(episodeUpdateJob)
     }
 
     private fun setupPodcastListView(){

@@ -10,11 +10,12 @@ import com.example.podplay.util.DateUtils
 import com.example.podplay.util.HtmlUtils
 import com.example.podplay.viewmodel.PodcastViewModel
 
-class EpisodeListAdapter (private var episodeViewList: List<PodcastViewModel.EpisodeViewData>?):
+class EpisodeListAdapter (private var episodeViewList: List<PodcastViewModel.EpisodeViewData>?,
+                          private val episodeListAdapterListener: EpisodeListAdapterListener):
     RecyclerView.Adapter<EpisodeListAdapter.ViewHolder>(){
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         return ViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.episode_item,
-            parent, false))
+            parent, false), episodeListAdapterListener)
     }
 
     override fun getItemCount(): Int {
@@ -31,11 +32,24 @@ class EpisodeListAdapter (private var episodeViewList: List<PodcastViewModel.Epi
         holder.releaseDateTextView.text = episodeView.releaseDate?.let { DateUtils.dateToShortDate(it) }
     }
 
-    class ViewHolder(itemView: View): RecyclerView.ViewHolder(itemView){
+    class ViewHolder(itemView: View, private val episodeListAdapterListener: EpisodeListAdapterListener):
+        RecyclerView.ViewHolder(itemView){
         var episodeViewData: PodcastViewModel.EpisodeViewData? = null
         val titleTextView: TextView = itemView.findViewById(R.id.titleView)
         val descTextView: TextView = itemView.findViewById(R.id.descView)
         val durationTextView: TextView = itemView.findViewById(R.id.durationView)
         val releaseDateTextView: TextView = itemView.findViewById(R.id.releaseDateView)
+
+        init {
+            itemView.setOnClickListener {
+                episodeViewData?.let {
+                    episodeListAdapterListener.onSelectedEpisode(it)
+                }
+            }
+        }
     }
+}
+
+interface EpisodeListAdapterListener{
+    fun onSelectedEpisode(episodeViewData: PodcastViewModel.EpisodeViewData)
 }
