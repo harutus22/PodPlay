@@ -40,6 +40,11 @@ class PodcastActivity : AppCompatActivity(), PodcastListAdapter.PodcastListAdapt
         supportFragmentManager.popBackStack()
     }
 
+    override fun onShowEpisodePlayer(episodeViewData: PodcastViewModel.EpisodeViewData) {
+        podcastViewModel.activeEpisodeViewData = episodeViewData
+        showPlayerFragment()
+    }
+
     private lateinit var searchViewModel: SearchViewModel
     private lateinit var podcastListAdapter: PodcastListAdapter
     private lateinit var searchMenuItem: MenuItem
@@ -49,6 +54,7 @@ class PodcastActivity : AppCompatActivity(), PodcastListAdapter.PodcastListAdapt
         val TAG = javaClass.simpleName
         private val TAG_DETAILS_FRAGMENT = "DetailsFragment"
         private val TAG_EPISODE_UPDATE_JOB = "com.example.podplay.episodes"
+        private const val TAG_PLAYER_FRAGMENT = "PlayerFragment"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -234,5 +240,24 @@ class PodcastActivity : AppCompatActivity(), PodcastListAdapter.PodcastListAdapt
                 showSubscribedPodcasts()
             }
         })
+    }
+
+    private fun createEpisodePlayerFragment(): EpisodePlayerFragment{
+        var episodePlayerFragment = supportFragmentManager.findFragmentByTag(TAG_PLAYER_FRAGMENT) as
+                EpisodePlayerFragment?
+        if (episodePlayerFragment == null){
+            episodePlayerFragment = EpisodePlayerFragment.newInstance()
+        }
+
+        return episodePlayerFragment
+    }
+
+    private fun showPlayerFragment(){
+        val episodePlayerFragment = createEpisodePlayerFragment()
+
+        supportFragmentManager.beginTransaction().replace(R.id.podcastDetailsContainer,
+            episodePlayerFragment, TAG_PLAYER_FRAGMENT).addToBackStack("PlayerFragment").commit()
+        podcastRecyclerView.visibility = View.INVISIBLE
+        searchMenuItem.isVisible = false
     }
 }

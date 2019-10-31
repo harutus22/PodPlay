@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 import java.net.URL
 
 class PodplayMediaService : MediaBrowserServiceCompat(), PodPlayMediaListener {
-    override fun onStateChanget() {
+    override fun onStateChanged() {
         displayNotification()
     }
 
